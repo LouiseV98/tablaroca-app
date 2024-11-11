@@ -1,0 +1,31 @@
+docker tag image-service:latest louisev/image-service:latest
+
+docker push louisev/image-service:latest
+
+catalog-service:latest
+
+docker tag catalog-service:latest louisev/catalog-service:latest
+
+docker push louisev/catalog-service:latest
+
+user-service:latest
+
+docker tag user-service:latest louisev/user-service:latest
+
+docker push louisev/user-service:latest
+
+louisev/image-service:latest
+
+louisev/catalog-service:latest
+
+louisev/user-service:latest
+
+kubectl delete -f k8s/user-deployment.yaml
+kubectl apply -f k8s/user-deployment.yaml
+
+Invoke-WebRequest -Uri http://localhost:5000/designs -Method POST -Headers @{ "Content-Type" = "application/json" } -Body '{"username": "nuevo_usuario", "password": "mi_password"}'
+
+Invoke-WebRequest -Uri http://localhost:30001/register -Method POST -Headers @{ "Content-Type" = "application/json" } -Body '{"title": "Diseño Sala", "description": "Diseño moderno para sala con tablaroca"}'
+
+catalog-service-896b6f5cd-ngds9
+catalog-service-896b6f5cd-zbzqz
