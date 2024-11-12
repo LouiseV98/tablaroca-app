@@ -4,8 +4,8 @@ import jwt
 import datetime
 
 app = Flask(__name__)
-CORS(app, resources={r"/login": {"origins": "http://localhost:3000"}})  # Permite solicitudes solo desde el frontend en localhost:3000
-# También puedes permitir todos los orígenes con CORS(app) si prefieres
+
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 app.config['SECRET_KEY'] = 'tu_clave_secreta'
 

@@ -47,22 +47,31 @@ export function DrywallShowcaseComponent() {
   }
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:30003/login', { username, password })
-      if (response.status === 200) {
-        setIsLoggedIn(true)
-        console.log('Sesión iniciada con éxito:', response.data)
-      }
+        const response = await axios.post(
+            'http://127.0.0.1:5000/login', 
+            { username, password },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            }
+        );
+        if (response.status === 200) {
+            setIsLoggedIn(true);
+            console.log('Sesión iniciada con éxito:', response.data);
+        }
     } catch (error) {
-      console.error('Error al iniciar sesión:', error)
+        console.error('Error al iniciar sesión:', error);
     }
-  }
+};
+
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const response = await axios.post('http://localhost:30003/register', { username, password })
+      const response = await axios.post('http://127.0.0.1:5000/register', { username, password })
       if (response.status === 201) {
         setIsLoggedIn(true)
         console.log('Usuario registrado con éxito:', response.data)
