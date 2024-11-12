@@ -62,6 +62,8 @@ export function DrywallShowcaseComponent() {
             setIsLoggedIn(true);
             console.log('Sesión iniciada con éxito:', response.data);
         }
+        const token = response.data.token;
+        console.log("Token:", token);
     } catch (error) {
         console.error('Error al iniciar sesión:', error);
     }
