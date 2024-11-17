@@ -51,7 +51,7 @@ export function DrywallShowcaseComponent() {
     try {
         const response = await axios.post(
             'http://127.0.0.1:5000/login', 
-            { username, password },
+            { username, password},
             {
                 headers: {
                     'Content-Type': 'application/json',
@@ -64,9 +64,16 @@ export function DrywallShowcaseComponent() {
         }
         const token = response.data.token;
         console.log("Token:", token);
-    } catch (error) {
-        console.error('Error al iniciar sesión:', error);
-    }
+    } catch (error: any) {
+      if (error.response) {
+          console.error('Respuesta del servidor:', error.response.data);
+          console.error('Código de estado:', error.response.status);
+      } else if (error.request) {
+          console.error('No se recibió respuesta del servidor:', error.request);
+      } else {
+          console.error('Error al configurar la solicitud:', error.message);
+      }
+  }
 };
 
 
@@ -116,7 +123,8 @@ export function DrywallShowcaseComponent() {
                           id="username" 
                           type="text" 
                           value={username} 
-                          onChange={(e) => setUsername(e.target.value)} 
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder='Usuario' 
                           required 
                         />
                       </div>
@@ -127,6 +135,7 @@ export function DrywallShowcaseComponent() {
                           type="password" 
                           value={password} 
                           onChange={(e) => setPassword(e.target.value)} 
+                          placeholder='Contraseña'
                           required 
                         />
                       </div>
@@ -150,6 +159,7 @@ export function DrywallShowcaseComponent() {
                           type="text" 
                           value={username} 
                           onChange={(e) => setUsername(e.target.value)} 
+                          placeholder='Ingrese un nombre de usuario'
                           required 
                         />
                       </div>
@@ -159,7 +169,8 @@ export function DrywallShowcaseComponent() {
                           id="password" 
                           type="password" 
                           value={password} 
-                          onChange={(e) => setPassword(e.target.value)} 
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder='Ingrese una contraseña' 
                           required 
                         />
                       </div>
