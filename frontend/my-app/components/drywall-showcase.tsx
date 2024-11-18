@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from "@/components/ui/button"
@@ -37,6 +37,58 @@ export function DrywallShowcaseComponent() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [designId, setDesignId] = useState<string>(''); // Cambié a design_id
+  const [imageUrl, setImageUrl] = useState<string>('');
+  const [message, setMessage] = useState<string>('');
+  const [uploadedImages, setUploadedImages] = useState<{ design_id: string, url: string }[]>([]);
+
+  useEffect(() => {
+    const fetchImages = async () => { // Añadir console.log para verificar el valor
+        try {
+          const response = await axios.get(`http://127.0.0.1:5001/images/5`);
+          setUploadedImages(response.data);
+        } catch (error) {
+          console.error('Error fetching images:', error);
+        
+      } 
+    };
+  
+    fetchImages();
+  }, [designId]); // Solo se ejecuta cuando designId cambia
+  
+
+
+  const handleDesignIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("Nuevo design_id:", e.target.value);  // Añadir console.log
+    setDesignId(e.target.value);
+  };
+
+  const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImageUrl(e.target.value);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (!designId) {
+    setMessage('No se pudo obtener el ID del diseño');
+    return;
+  }
+
+  try {
+    const response = await axios.post('http://127.0.0.1:5001/images', {
+      design_id: designId,
+      url: imageUrl
+    });
+
+    setMessage('URL de imagen cargada con éxito');
+    setImageUrl('');
+    setDesignId('');
+  } catch (error) {
+    setMessage('Error al cargar la URL de la imagen');
+    console.error(error);
+  }
+};
 
   const nextSlide = () => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % drywallTechniques.length)
@@ -75,7 +127,6 @@ export function DrywallShowcaseComponent() {
       }
   }
 };
-
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -183,54 +234,66 @@ export function DrywallShowcaseComponent() {
           )}
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Card className="col-span-1 md:col-span-2">
-            <CardHeader>
-              <CardTitle>{drywallTechniques[currentIndex].title}</CardTitle>
-              <CardDescription>{drywallTechniques[currentIndex].description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="relative">
-                <img 
-                  src={drywallTechniques[currentIndex].image} 
-                  alt={drywallTechniques[currentIndex].title}
-                  className="w-full h-[400px] object-cover rounded-lg"
-                />
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="absolute top-1/2 left-4 transform -translate-y-1/2"
-                  onClick={prevSlide}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="absolute top-1/2 right-4 transform -translate-y-1/2"
-                  onClick={nextSlide}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900">Galería de Técnicas</h2>
+          <div className="relative">
+            <img
+              src={drywallTechniques[currentIndex].image}
+              alt={drywallTechniques[currentIndex].title}
+              className="w-full h-72 object-cover rounded-lg"
+            />
+            <div className="absolute top-1/2 left-2 transform -translate-y-1/2">
+              <Button variant="ghost" onClick={prevSlide}>
+                <ChevronLeft className="w-6 h-6 text-white" />
+              </Button>
+            </div>
+            <div className="absolute top-1/2 right-2 transform -translate-y-1/2">
+              <Button variant="ghost" onClick={nextSlide}>
+                <ChevronRight className="w-6 h-6 text-white" />
+              </Button>
+            </div>
+          </div>
+        </div>
 
-          {drywallTechniques.map((technique, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle>{technique.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <img 
-                  src={technique.image} 
-                  alt={technique.title}
-                  className="w-full h-48 object-cover rounded-lg mb-4"
+        <div>
+          <form onSubmit={handleSubmit}>
+            <div>
+              <Label htmlFor="designId">ID del Diseño</Label>
+              <Input
+                id="designId"
+                value={designId} // Cambié a design_id
+                onChange={handleDesignIdChange}
+                required
+              />
+            </div>
+            <div className="mt-2">
+              <Label htmlFor="imageUrl">URL de la Imagen</Label>
+              <Input
+                id="imageUrl"
+                value={imageUrl}
+                onChange={handleImageUrlChange}
+                required
+              />
+            </div>
+            <Button type="submit" className="mt-4">Subir Imagen</Button>
+          </form>
+          {message && <p className="mt-4">{message}</p>}
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mt-12">Imágenes Subidas</h2>
+          <div className="grid grid-cols-3 gap-4 mt-4">
+            {uploadedImages.map((image) => (
+              <div key={image.design_id} className="border p-2 rounded-lg">
+                <img
+                  src={image.url}
+                  alt={`Imagen ${image.design_id}`}
+                  className="w-full h-40 object-cover rounded-lg"
                 />
-                <CardDescription>{technique.description}</CardDescription>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
