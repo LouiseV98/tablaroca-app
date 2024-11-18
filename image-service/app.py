@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 import psycopg2
 from psycopg2 import sql
 from dotenv import load_dotenv
@@ -12,7 +12,15 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
-# Conexión a la base de datos PostgreSQL usando variables de entorno
+# Directorio para almacenar imágenes
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+# Extensiones permitidas
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+
+# Conexión a PostgreSQL
 try:
     conn = psycopg2.connect(
         dbname=os.getenv("DB_NAME"),
@@ -26,19 +34,39 @@ except Exception as e:
     print(f"Error al conectar con la base de datos: {e}")
     exit(1)
 
-# Ruta para subir la URL de la imagen
-@app.route("/images", methods=["POST"])
+def allowed_file(filename):
+    """Verifica si el archivo tiene una extensión permitida."""
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route("/images/upload", methods=["POST"])
 def upload_image():
-    data = request.json
-    print(f"Recibido en backend: {data}")  # Imprime el cuerpo de la solicitud
+    """
+    Subir una imagen y asociarla a un diseño.
+    La imagen se guarda en la carpeta `uploads` y se registra en la base de datos.
+    """
+    if "image" not in request.files:
+        return jsonify({"message": "No se proporcionó el archivo de imagen"}), 400
 
-    design_id = data.get("design_id")
-    image_url = data.get("url")
+    image = request.files["image"]
+    design_id = request.form.get("design_id")
 
-    if not design_id or not image_url:
-        return jsonify({'message': 'Missing design_id or url'}), 400
+    if not design_id:
+        return jsonify({"message": "Falta el ID del diseño"}), 400
+
+    if image.filename == "":
+        return jsonify({"message": "No se seleccionó ningún archivo"}), 400
+
+    if not allowed_file(image.filename):
+        return jsonify({"message": "Extensión de archivo no permitida"}), 400
 
     try:
+        # Guardar la imagen en el servidor
+        filename = f"{design_id}_{image.filename}"
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        image.save(filepath)
+
+        # Guardar la ruta de la imagen en la base de datos
+        image_url = f"/uploads/{filename}"
         cur.execute(
             "INSERT INTO images (design_id, url) VALUES (%s, %s) RETURNING id",
             (design_id, image_url)
@@ -49,21 +77,24 @@ def upload_image():
         return jsonify({"id": image_id, "url": image_url, "message": "Imagen cargada con éxito"}), 201
     except Exception as e:
         conn.rollback()
-        return jsonify({"message": f"Error al guardar la URL de la imagen: {str(e)}"}), 500
+        return jsonify({"message": f"Error al guardar la imagen: {str(e)}"}), 500
 
-# Ruta para obtener las imágenes de un diseño
-@app.route("/images/<int:design_id>", methods=["GET"])
-def get_images(design_id):
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/images', methods=['GET'])
+def get_images():
     try:
-        cur.execute("SELECT id, url FROM images WHERE design_id = %s", (design_id,))
-        images = cur.fetchall()
-
-        # Devuelve una lista de imágenes con sus URLs
-        images_data = [{"id": img[0], "url": img[1], "design_id": design_id} for img in images]
-
-        return jsonify(images_data)
+        # Lista los archivos en la carpeta 'uploads'
+        images = os.listdir(app.config['UPLOAD_FOLDER'])
+        
+        # Filtra solo los archivos de imagen
+        image_files = [img for img in images if img.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp'))]
+        
+        return jsonify(image_files)
     except Exception as e:
-        return jsonify({"message": f"Error al obtener las imágenes: {str(e)}"}), 500
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)

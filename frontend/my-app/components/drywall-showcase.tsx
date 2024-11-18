@@ -37,96 +37,34 @@ export function DrywallShowcaseComponent() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [designId, setDesignId] = useState<string>(''); // Cambié a design_id
-  const [imageUrl, setImageUrl] = useState<string>('');
-  const [message, setMessage] = useState<string>('');
-  const [uploadedImages, setUploadedImages] = useState<{ design_id: string, url: string }[]>([]);
+  const [designId, setDesignId] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+
+  const fetchImages = async () => {
+    try {
+      const response = await axios.get('http://127.0.0.1:5001/images');
+      setUploadedImages(response.data);
+    } catch (error) {
+      console.error('Error fetching images:', error);
+    }
+  };
 
   useEffect(() => {
-    const fetchImages = async () => { // Añadir console.log para verificar el valor
-        try {
-          const response = await axios.get(`http://127.0.0.1:5001/images/5`);
-          setUploadedImages(response.data);
-        } catch (error) {
-          console.error('Error fetching images:', error);
-        
-      } 
-    };
-  
     fetchImages();
-  }, [designId]); // Solo se ejecuta cuando designId cambia
-  
-
-
-  const handleDesignIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("Nuevo design_id:", e.target.value);  // Añadir console.log
-    setDesignId(e.target.value);
-  };
-
-  const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setImageUrl(e.target.value);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-
-  if (!designId) {
-    setMessage('No se pudo obtener el ID del diseño');
-    return;
-  }
-
-  try {
-    const response = await axios.post('http://127.0.0.1:5001/images', {
-      design_id: designId,
-      url: imageUrl
-    });
-
-    setMessage('URL de imagen cargada con éxito');
-    setImageUrl('');
-    setDesignId('');
-  } catch (error) {
-    setMessage('Error al cargar la URL de la imagen');
-    console.error(error);
-  }
-};
-
-  const nextSlide = () => {
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % drywallTechniques.length)
-  }
-
-  const prevSlide = () => {
-    setCurrentIndex((prevIndex) => (prevIndex - 1 + drywallTechniques.length) % drywallTechniques.length)
-  }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     try {
-        const response = await axios.post(
-            'http://127.0.0.1:5000/login', 
-            { username, password},
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            }
-        );
-        if (response.status === 200) {
-            setIsLoggedIn(true);
-            console.log('Sesión iniciada con éxito:', response.data);
-        }
-        const token = response.data.token;
-        console.log("Token:", token);
-    } catch (error: any) {
-      if (error.response) {
-          console.error('Respuesta del servidor:', error.response.data);
-          console.error('Código de estado:', error.response.status);
-      } else if (error.request) {
-          console.error('No se recibió respuesta del servidor:', error.request);
-      } else {
-          console.error('Error al configurar la solicitud:', error.message);
+      const response = await axios.post('http://127.0.0.1:5000/login', { username, password })
+      if (response.status === 200) {
+        setIsLoggedIn(true)
       }
+    } catch (error) {
+      console.error(error)
+    }
   }
-};
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -134,10 +72,9 @@ export function DrywallShowcaseComponent() {
       const response = await axios.post('http://127.0.0.1:5000/register', { username, password })
       if (response.status === 201) {
         setIsLoggedIn(true)
-        console.log('Usuario registrado con éxito:', response.data)
       }
     } catch (error) {
-      console.error('Error al registrar usuario:', error)
+      console.error(error)
     }
   }
 
@@ -147,9 +84,33 @@ export function DrywallShowcaseComponent() {
     setPassword('')
   }
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!designId || !imageFile) {
+      console.error('Error: Todos los campos son obligatorios.')
+      return
+    }
+    const formData = new FormData()
+    formData.append('design_id', designId)
+    formData.append('image', imageFile)
+
+    try {
+      await axios.post('http://127.0.0.1:5001/images/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      setImageFile(null)
+      setDesignId('')
+    } catch (error) {
+      console.error('Error al subir la imagen:', error)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
+        {/* Encabezado y sección de autenticación */}
         <div className="flex justify-between items-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900">Instalación en Tablaroca</h1>
           {isLoggedIn ? (
@@ -170,27 +131,27 @@ export function DrywallShowcaseComponent() {
                     <form onSubmit={handleLogin}>
                       <div className="space-y-1">
                         <Label htmlFor="username">Nombre de Usuario</Label>
-                        <Input 
-                          id="username" 
-                          type="text" 
-                          value={username} 
+                        <Input
+                          id="username"
+                          type="text"
+                          value={username}
                           onChange={(e) => setUsername(e.target.value)}
-                          placeholder='Usuario' 
-                          required 
+                          placeholder="Usuario"
+                          required
                         />
                       </div>
                       <div className="space-y-1">
                         <Label htmlFor="password">Contraseña</Label>
-                        <Input 
-                          id="password" 
-                          type="password" 
-                          value={password} 
-                          onChange={(e) => setPassword(e.target.value)} 
-                          placeholder='Contraseña'
-                          required 
+                        <Input
+                          id="password"
+                          type="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Contraseña"
+                          required
                         />
                       </div>
-                      <Button type="submit" className="w-full mt-4" onSubmit={handleLogin}>Iniciar Sesión</Button>
+                      <Button type="submit" className="w-full mt-4">Iniciar Sesión</Button>
                     </form>
                   </CardContent>
                 </Card>
@@ -205,24 +166,24 @@ export function DrywallShowcaseComponent() {
                     <form onSubmit={handleRegister}>
                       <div className="space-y-1">
                         <Label htmlFor="username">Nombre de Usuario</Label>
-                        <Input 
-                          id="username" 
-                          type="text" 
-                          value={username} 
-                          onChange={(e) => setUsername(e.target.value)} 
-                          placeholder='Ingrese un nombre de usuario'
-                          required 
+                        <Input
+                          id="username"
+                          type="text"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="Ingrese un nombre de usuario"
+                          required
                         />
                       </div>
                       <div className="space-y-1">
                         <Label htmlFor="password">Contraseña</Label>
-                        <Input 
-                          id="password" 
-                          type="password" 
-                          value={password} 
+                        <Input
+                          id="password"
+                          type="password"
+                          value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          placeholder='Ingrese una contraseña' 
-                          required 
+                          placeholder="Ingrese una contraseña"
+                          required
                         />
                       </div>
                       <Button type="submit" className="w-full mt-4">Registrarse</Button>
@@ -233,8 +194,8 @@ export function DrywallShowcaseComponent() {
             </Tabs>
           )}
         </div>
-        
-        
+
+        {/* Galería de Técnicas */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900">Galería de Técnicas</h2>
           <div className="relative">
@@ -244,57 +205,63 @@ export function DrywallShowcaseComponent() {
               className="w-full h-72 object-cover rounded-lg"
             />
             <div className="absolute top-1/2 left-2 transform -translate-y-1/2">
-              <Button variant="ghost" onClick={prevSlide}>
+              <Button variant="ghost" onClick={() => setCurrentIndex((prevIndex) => (prevIndex - 1 + drywallTechniques.length) % drywallTechniques.length)}>
                 <ChevronLeft className="w-6 h-6 text-white" />
               </Button>
             </div>
             <div className="absolute top-1/2 right-2 transform -translate-y-1/2">
-              <Button variant="ghost" onClick={nextSlide}>
+              <Button variant="ghost" onClick={() => setCurrentIndex((prevIndex) => (prevIndex + 1) % drywallTechniques.length)}>
                 <ChevronRight className="w-6 h-6 text-white" />
               </Button>
             </div>
           </div>
         </div>
 
+        {/* Formulario para subir imágenes */}
         <div>
           <form onSubmit={handleSubmit}>
             <div>
               <Label htmlFor="designId">ID del Diseño</Label>
               <Input
                 id="designId"
-                value={designId} // Cambié a design_id
-                onChange={handleDesignIdChange}
+                value={designId}
+                onChange={(e) => setDesignId(e.target.value)}
                 required
               />
             </div>
             <div className="mt-2">
-              <Label htmlFor="imageUrl">URL de la Imagen</Label>
+              <Label htmlFor="image">Seleccionar Imagen</Label>
               <Input
-                id="imageUrl"
-                value={imageUrl}
-                onChange={handleImageUrlChange}
+                id="image"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
                 required
               />
             </div>
             <Button type="submit" className="mt-4">Subir Imagen</Button>
           </form>
-          {message && <p className="mt-4">{message}</p>}
         </div>
 
+        {/* Imágenes Subidas */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mt-12">Imágenes Subidas</h2>
-          <div className="grid grid-cols-3 gap-4 mt-4">
-            {uploadedImages.map((image) => (
-              <div key={image.design_id} className="border p-2 rounded-lg">
-                <img
-                  src={image.url}
-                  alt={`Imagen ${image.design_id}`}
-                  className="w-full h-40 object-cover rounded-lg"
-                />
-              </div>
-            ))}
-          </div>
+  <h2 className="text-2xl font-bold text-gray-900">Imágenes Subidas</h2>
+  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+    {uploadedImages.length > 0 ? (
+      uploadedImages.map((image, index) => (
+        <div key={index} className="relative">
+          <img
+            src={`http://127.0.0.1:5001/uploads/${image}`}
+            alt={`Imagen ${index + 1}`}
+            className="w-full h-auto object-cover rounded-lg"
+          />
         </div>
+      ))
+    ) : (
+      <p>No hay imágenes disponibles.</p>
+    )}
+  </div>
+</div>
       </div>
     </div>
   )
