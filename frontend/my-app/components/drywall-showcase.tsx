@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, User, Lock, Mail} from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,22 +13,22 @@ const drywallTechniques = [
   {
     title: "Instalación Básica",
     description: "Técnica fundamental para instalar paneles de tablaroca en paredes y techos.",
-    image: "/placeholder.svg?height=400&width=600"
+    image: "/images/1.jpg"
   },
   {
     title: "Acabado Liso",
     description: "Proceso para lograr una superficie perfectamente lisa y sin imperfecciones.",
-    image: "/placeholder.svg?height=400&width=600"
+    image: "/images/2.jpg"
   },
   {
     title: "Texturizado",
     description: "Aplicación de diferentes texturas decorativas sobre la superficie de la tablaroca.",
-    image: "/placeholder.svg?height=400&width=600"
+    image: "/images/3.jpg"
   },
   {
     title: "Esquinas y Bordes",
     description: "Técnicas para lograr esquinas y bordes perfectos en las instalaciones de tablaroca.",
-    image: "/placeholder.svg?height=400&width=600"
+    image: "/images/4.jpg"
   }
 ]
 
@@ -40,6 +40,14 @@ export function DrywallShowcaseComponent() {
   const [designId, setDesignId] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+
+  const nextSlide = () => {
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % drywallTechniques.length)
+  }
+
+  const prevSlide = () => {
+    setCurrentIndex((prevIndex) => (prevIndex - 1 + drywallTechniques.length) % drywallTechniques.length)
+  }
 
   const fetchImages = async () => {
     try {
@@ -194,6 +202,40 @@ export function DrywallShowcaseComponent() {
             </Tabs>
           )}
         </div>
+        
+        {/* Carrousel */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <Card className="col-span-1 md:col-span-2">
+            <CardHeader>
+              <CardTitle>{drywallTechniques[currentIndex].title}</CardTitle>
+              <CardDescription>{drywallTechniques[currentIndex].description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="relative">
+                <img 
+                  src={drywallTechniques[currentIndex].image} 
+                  alt={drywallTechniques[currentIndex].title}
+                  className="w-full h-100 object-cover rounded-lg"
+                />
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="absolute top-1/2 left-4 transform -translate-y-1/2"
+                  onClick={prevSlide}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="absolute top-1/2 right-4 transform -translate-y-1/2"
+                  onClick={nextSlide}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
         {/* Galería de Técnicas */}
         <div className="mb-8">
@@ -202,7 +244,7 @@ export function DrywallShowcaseComponent() {
             <img
               src={drywallTechniques[currentIndex].image}
               alt={drywallTechniques[currentIndex].title}
-              className="w-full h-72 object-cover rounded-lg"
+              className="w-full h-82 object-cover rounded-lg"
             />
             <div className="absolute top-1/2 left-2 transform -translate-y-1/2">
               <Button variant="ghost" onClick={() => setCurrentIndex((prevIndex) => (prevIndex - 1 + drywallTechniques.length) % drywallTechniques.length)}>
@@ -263,6 +305,7 @@ export function DrywallShowcaseComponent() {
   </div>
 </div>
       </div>
+    </div>
     </div>
   )
 }
