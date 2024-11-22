@@ -4,3 +4,13 @@
 ## Interfaz
 
 ![Tutorial](images/1.png)
+
+  Cuenta con servicio de autenticación y registro de usuarios.
+
+## Subida de imágenes
+
+![Tutorial](images/2.png)
+
+El usuario también es capaz de subir sus propias imágenes de diseños.
+
+![Tutorial](images/3.png)
