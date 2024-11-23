@@ -40,6 +40,7 @@ export function DrywallShowcaseComponent() {
   const [designId, setDesignId] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const token = localStorage.getItem('token')
 
   const nextSlide = () => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % drywallTechniques.length)
@@ -66,10 +67,17 @@ export function DrywallShowcaseComponent() {
     e.preventDefault()
     try {
       const response = await axios.post('http://127.0.0.1:5000/login', { username, password })
+
       if (response.status === 200) {
         setIsLoggedIn(true)
       }
-    } catch (error) {
+      const token = response.data.token
+    localStorage.setItem('token', token) // Guarda el token
+    console.log('Login exitoso. Token guardado:', token)
+    console.log(`Token usado: Bearer ${token}`)
+    
+  }
+     catch (error) {
       console.error(error)
     }
   }
@@ -94,26 +102,38 @@ export function DrywallShowcaseComponent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+  
     if (!designId || !imageFile) {
       console.error('Error: Todos los campos son obligatorios.')
       return
     }
+  
     const formData = new FormData()
     formData.append('design_id', designId)
     formData.append('image', imageFile)
-
+  
+    // Recuperar el token desde localStorage
+    const token = localStorage.getItem('token')
+    if (!token) {
+      console.error('Error: No se encontró el token de autenticación.')
+      return
+    }
+  
     try {
       await axios.post('http://127.0.0.1:5001/images/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`, // Formato correcto
         },
       })
       setImageFile(null)
       setDesignId('')
+      console.log('Imagen subida con éxito')
     } catch (error) {
       console.error('Error al subir la imagen:', error)
     }
   }
+  
 
   return (
     <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">

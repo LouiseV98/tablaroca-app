@@ -4,9 +4,13 @@ import psycopg2
 from psycopg2 import sql
 from dotenv import load_dotenv
 from flask_cors import CORS
+from functools import wraps
+import jwt
 
 # Cargar variables de entorno
 load_dotenv()
+
+SECRET_KEY = "tu_clave_secreta"
 
 # Configuración de Flask
 app = Flask(__name__)
@@ -38,20 +42,39 @@ def allowed_file(filename):
     """Verifica si el archivo tiene una extensión permitida."""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get("Authorization")  # El token se espera en el encabezado Authorization
+
+        if not token:
+            return jsonify({"message": "Token no proporcionado"}), 401
+
+        try:
+            # Decodificar el token y obtener el user_id
+            decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            request.user_id = decoded_token["user_id"]  # Almacenar user_id en la solicitud
+            print("ID de usuario decodificado:", request.user_id)
+
+        except jwt.ExpiredSignatureError:
+            return jsonify({"message": "El token ha expirado"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"message": "Token inválido"}), 401
+
+        return f(*args, **kwargs)
+    return decorated
+
 @app.route("/images/upload", methods=["POST"])
+@token_required
 def upload_image():
     """
-    Subir una imagen y asociarla a un diseño.
-    La imagen se guarda en la carpeta `uploads` y se registra en la base de datos.
+    Subir una imagen asociada a un usuario autenticado.
     """
     if "image" not in request.files:
         return jsonify({"message": "No se proporcionó el archivo de imagen"}), 400
 
     image = request.files["image"]
-    design_id = request.form.get("design_id")
-
-    if not design_id:
-        return jsonify({"message": "Falta el ID del diseño"}), 400
+    user_id = request.user_id  # Obtener user_id del token
 
     if image.filename == "":
         return jsonify({"message": "No se seleccionó ningún archivo"}), 400
@@ -61,40 +84,60 @@ def upload_image():
 
     try:
         # Guardar la imagen en el servidor
-        filename = f"{design_id}_{image.filename}"
+        filename = f"{user_id}_{image.filename}"
         filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         image.save(filepath)
 
         # Guardar la ruta de la imagen en la base de datos
-        image_url = f"/uploads/{filename}"
         cur.execute(
-            "INSERT INTO images (design_id, url) VALUES (%s, %s) RETURNING id",
-            (design_id, image_url)
+            "INSERT INTO images (user_id, filename) VALUES (%s, %s) RETURNING id",
+            (user_id, filename)
         )
         conn.commit()
         image_id = cur.fetchone()[0]
 
-        return jsonify({"id": image_id, "url": image_url, "message": "Imagen cargada con éxito"}), 201
+        return jsonify({"id": image_id, "filename": filename, "message": "Imagen cargada con éxito"}), 201
     except Exception as e:
         conn.rollback()
         return jsonify({"message": f"Error al guardar la imagen: {str(e)}"}), 500
 
-@app.route('/uploads/<filename>')
+@app.route('/uploads/<filename>', methods=["GET"])
+@token_required
 def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    """
+    Descarga una imagen solo si pertenece al usuario autenticado.
+    """
+    user_id = request.user_id  # Obtener user_id del token
 
-@app.route('/images', methods=['GET'])
-def get_images():
     try:
-        # Lista los archivos en la carpeta 'uploads'
-        images = os.listdir(app.config['UPLOAD_FOLDER'])
-        
-        # Filtra solo los archivos de imagen
-        image_files = [img for img in images if img.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp'))]
-        
-        return jsonify(image_files)
+        # Verifica que la imagen pertenece al usuario
+        cur.execute("SELECT id FROM images WHERE filename = %s AND user_id = %s", (filename, user_id))
+        image = cur.fetchone()
+
+        if not image:
+            return jsonify({"message": "Acceso denegado"}), 403
+
+        # Enviar la imagen si pasa la validación
+        return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"message": f"Error al acceder a la imagen: {str(e)}"}), 500
+
+
+@app.route("/images", methods=["GET"])
+@token_required
+def get_images():
+    """
+    Obtén las imágenes del usuario autenticado.
+    """
+    user_id = request.user_id  # Obtener user_id del token
+
+    try:
+        cur.execute("SELECT id, filename FROM images WHERE user_id = %s", (user_id,))
+        images = cur.fetchall()
+
+        return jsonify([{"id": row[0], "filename": row[1]} for row in images]), 200
+    except Exception as e:
+        return jsonify({"message": f"Error al obtener las imágenes: {str(e)}"}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
