@@ -3,7 +3,7 @@
 
 ## Interfaz
 
-![Tutorial](images/1.png)
+![Tutorial](images/4.png)
 
   Cuenta con servicio de autenticación y registro de usuarios.
 
