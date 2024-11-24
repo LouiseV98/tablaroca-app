@@ -1,11 +1,11 @@
 import os
 from flask import Flask, jsonify, request, send_from_directory
 import psycopg2
-from psycopg2 import sql
 from dotenv import load_dotenv
 from flask_cors import CORS
 from functools import wraps
 import jwt
+import logging
 
 # Cargar variables de entorno
 load_dotenv()
@@ -14,7 +14,7 @@ SECRET_KEY = "tu_clave_secreta"
 
 # Configuración de Flask
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True, allow_headers="Authorization")
 
 # Directorio para almacenar imágenes
 UPLOAD_FOLDER = "uploads"
@@ -23,6 +23,9 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 # Extensiones permitidas
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+
+# Configurar logging
+logging.basicConfig(level=logging.DEBUG)
 
 # Conexión a PostgreSQL
 try:
@@ -69,7 +72,6 @@ def token_required(f):
         return f(*args, **kwargs)
     return decorated
 
-
 @app.route("/images/upload", methods=["POST"])
 @token_required
 def upload_image():
@@ -97,42 +99,25 @@ def upload_image():
         return jsonify({"message": "Imagen subida correctamente"}), 201
     except Exception as e:
         conn.rollback()
+        app.logger.error(f"Error al guardar en la base de datos: {e}")
         return jsonify({"message": f"Error al guardar en la base de datos: {e}"}), 500
 
-from flask import send_from_directory
-
-@app.route('/uploads/<path:filename>', methods=["GET"])
-@token_required
-def get_uploaded_file(filename):
-    user_id = request.user_id  # Obtenemos el user_id del token
-
-    try:
-        # Verificar que el archivo pertenece al usuario
-        cur.execute(
-            "SELECT id FROM images WHERE filename = %s AND user_id = %s",
-            (filename, user_id),
-        )
-        image = cur.fetchone()
-
-        if not image:
-            return jsonify({"message": "Acceso denegado"}), 403
-
-        # Asegurar que el directorio es correcto
-        upload_folder = app.config.get("UPLOAD_FOLDER", "uploads")
-        return send_from_directory(upload_folder, filename, as_attachment=True)
-    except Exception as e:
-        return jsonify({"message": f"Error al obtener la imagen: {str(e)}"}), 500
-
-
 @app.route("/images", methods=["GET"])
+@token_required
 def list_images():
+    user_id = request.user_id  # Obtener user_id desde el token
     try:
-        cur.execute("SELECT filename FROM images")
+        cur.execute("SELECT filename FROM images WHERE user_id = %s", (user_id,))
         rows = cur.fetchall()
         files = [row[0] for row in rows]
         return jsonify(files), 200
     except Exception as e:
+        app.logger.error(f"Error al listar imágenes: {e}")
         return jsonify({"message": f"Error al listar imágenes: {e}"}), 500
+
+@app.route('/uploads/<path:filename>', methods=["GET"])
+def serve_image(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)

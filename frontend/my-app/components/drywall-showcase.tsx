@@ -40,7 +40,15 @@ export function DrywallShowcaseComponent() {
   const [designId, setDesignId] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  const token = localStorage.getItem('token')
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  const openModal = (image: string) => {
+    setSelectedImage(image);
+  };
+  
+  const closeModal = () => {
+    setSelectedImage(null);
+  };
 
   const nextSlide = () => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % drywallTechniques.length)
@@ -52,21 +60,41 @@ export function DrywallShowcaseComponent() {
 
   const fetchImages = async () => {
     try {
-      const token = localStorage.getItem('token'); // Recupera el token
+      const token = localStorage.getItem('token');
       const response = await axios.get(`http://127.0.0.1:5001/images`, {
         headers: {
-          Authorization: `Bearer ${token}`, // Incluye el encabezado correctamente
+          Authorization: `Bearer ${token}`,
         },
       });
-      setUploadedImages(response.data);
+  
+      // Construir URLs con token en el encabezado para cada imagen
+      const imageRequests = response.data.map((imageName: string) =>
+        axios.get(`http://127.0.0.1:5001/uploads/${imageName}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then(res => res.config.url)
+      );
+  
+      const imageUrls = await Promise.all(imageRequests);
+      setUploadedImages(imageUrls);
     } catch (error) {
       console.error('Error fetching images:', error);
     }
   };
+  
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeModal();
+    };
+  
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
-    fetchImages();
-  }, []);
+    if (isLoggedIn) {
+      fetchImages();
+    }
+  }, [isLoggedIn]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -103,6 +131,8 @@ export function DrywallShowcaseComponent() {
     setIsLoggedIn(false)
     setUsername('')
     setPassword('')
+    localStorage.removeItem('token') // Opcional: limpiar el token de almacenamiento local
+    window.location.reload() // Recargar la página
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -145,88 +175,96 @@ export function DrywallShowcaseComponent() {
       <div className="max-w-7xl mx-auto">
         {/* Encabezado y sección de autenticación */}
         <div className="flex justify-between items-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900">Instalación en Tablaroca</h1>
-          {isLoggedIn ? (
-            <Button onClick={handleLogout}>Cerrar Sesión</Button>
-          ) : (
-            <Tabs defaultValue="login" className="w-[400px]">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
-                <TabsTrigger value="register">Registrarse</TabsTrigger>
-              </TabsList>
-              <TabsContent value="login">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Iniciar Sesión</CardTitle>
-                    <CardDescription>Ingresa tus credenciales para acceder a tu cuenta.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <form onSubmit={handleLogin}>
-                      <div className="space-y-1">
-                        <Label htmlFor="username">Nombre de Usuario</Label>
-                        <Input
-                          id="username"
-                          type="text"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          placeholder="Usuario"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="password">Contraseña</Label>
-                        <Input
-                          id="password"
-                          type="password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="Contraseña"
-                          required
-                        />
-                      </div>
-                      <Button type="submit" className="w-full mt-4">Iniciar Sesión</Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              <TabsContent value="register">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Registrarse</CardTitle>
-                    <CardDescription>Crea una nueva cuenta para acceder a nuestros servicios.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <form onSubmit={handleRegister}>
-                      <div className="space-y-1">
-                        <Label htmlFor="username">Nombre de Usuario</Label>
-                        <Input
-                          id="username"
-                          type="text"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          placeholder="Ingrese un nombre de usuario"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="password">Contraseña</Label>
-                        <Input
-                          id="password"
-                          type="password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="Ingrese una contraseña"
-                          required
-                        />
-                      </div>
-                      <Button type="submit" className="w-full mt-4">Registrarse</Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          )}
-        </div>
+      <div className="flex items-center">
+        {/* Imagen al lado del título */}
+        <img
+          src="/images/logo.png" // Ruta de tu imagen
+          alt="Icono de instalación"
+          className="w-64 h-64 mr-4" // Ajusta el tamaño de la imagen y el margen
+        />
+        <h1 className="text-4xl font-bold text-gray-900">Instalación en Tablaroca</h1>
+      </div>
+      {isLoggedIn ? (
+        <Button onClick={handleLogout}>Cerrar Sesión</Button>
+      ) : (
+        <Tabs defaultValue="login" className="w-[400px]">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
+            <TabsTrigger value="register">Registrarse</TabsTrigger>
+          </TabsList>
+          <TabsContent value="login">
+            <Card>
+              <CardHeader>
+                <CardTitle>Iniciar Sesión</CardTitle>
+                <CardDescription>Ingresa tus credenciales para acceder a tu cuenta.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <form onSubmit={handleLogin}>
+                  <div className="space-y-1">
+                    <Label htmlFor="username">Nombre de Usuario</Label>
+                    <Input
+                      id="username"
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Usuario"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="password">Contraseña</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Contraseña"
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full mt-4">Iniciar Sesión</Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="register">
+            <Card>
+              <CardHeader>
+                <CardTitle>Registrarse</CardTitle>
+                <CardDescription>Crea una nueva cuenta para acceder a nuestros servicios.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <form onSubmit={handleRegister}>
+                  <div className="space-y-1">
+                    <Label htmlFor="username">Nombre de Usuario</Label>
+                    <Input
+                      id="username"
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Ingrese un nombre de usuario"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="password">Contraseña</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Ingrese una contraseña"
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full mt-4">Registrarse</Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
+    </div>
         
         {/* Carrousel */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -316,9 +354,9 @@ export function DrywallShowcaseComponent() {
   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
     {uploadedImages.length > 0 ? (
       uploadedImages.map((image, index) => (
-        <div key={index} className="relative">
+        <div key={index} className="relative cursor-pointer" onClick={() => openModal(image)}>
           <img
-            src={`http://127.0.0.1:5001/uploads/${image}`}
+            src={image}
             alt={`Imagen ${index + 1}`}
             className="w-full h-auto object-cover rounded-lg"
           />
@@ -329,6 +367,30 @@ export function DrywallShowcaseComponent() {
     )}
   </div>
 </div>
+{selectedImage && (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75"
+    onClick={closeModal} // Cierra el modal si se hace clic en el fondo
+  >
+    <div
+      className="relative"
+      onClick={(e) => e.stopPropagation()} // Evita que el clic en la imagen cierre el modal
+    >
+      <img
+        src={selectedImage}
+        alt="Imagen ampliada"
+        className="max-w-full max-h-screen rounded-lg"
+      />
+      <button
+        onClick={closeModal}
+        className="absolute top-4 right-4 text-white bg-gray-800 p-2 rounded-full"
+      >
+        x
+      </button>
+    </div>
+  </div>
+)}
+
       </div>
     </div>
     </div>
