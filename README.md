@@ -25,3 +25,7 @@
 
   ![Tutorial](images/5.png)
 
+## Backend
+
+Los servicios están alojados en contenedores utilizando Docker, y orquestando con Kubernetes.
+
