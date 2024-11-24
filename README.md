@@ -53,6 +53,10 @@ De momento los servicios que se encuentran funcionando son el servicio de autent
 
 ## Tabla para subida de imagenes
 
-  En esta tabla se almacena el id como PK, el usuario que subió dicha imagen, el nombre del archivo ya que se puede elegir que archivo subir desde el frontend y la fecha de la sbuida.
+  En esta tabla se almacena el id como PK, el usuario que subió dicha imagen, el nombre del archivo ya que se puede elegir que archivo subir desde el frontend y la fecha de la subida.
 
   ![Tutorial](images/15.png)
+
+  Las imágenes se guardan localmente en mi computadora y estas son devueltas para ser visualizadas en el frontend.
+
+  ![Tutorial](images/16.png)
