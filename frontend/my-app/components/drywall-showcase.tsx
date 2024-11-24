@@ -41,7 +41,7 @@ export function DrywallShowcaseComponent() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-
+  
   const openModal = (image: string) => {
     setSelectedImage(image);
   };
@@ -81,6 +81,15 @@ export function DrywallShowcaseComponent() {
     }
   };
   
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % drywallTechniques.length)
+    }, 8000); // Cambia la imagen cada 3 segundos
+  
+    // Limpiar el intervalo cuando el componente se desmonte o se cambie la imagen manualmente
+    return () => clearInterval(intervalId);
+  }, []); // Este effect solo se ejecuta una vez al montar el componente
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeModal();
@@ -381,6 +390,7 @@ export function DrywallShowcaseComponent() {
         alt="Imagen ampliada"
         className="max-w-full max-h-screen rounded-lg"
       />
+      &times;
       <button
         onClick={closeModal}
         className="absolute top-4 right-4 text-white bg-gray-800 p-2 rounded-full"
