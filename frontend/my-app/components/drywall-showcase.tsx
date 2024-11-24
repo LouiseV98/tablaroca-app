@@ -52,7 +52,12 @@ export function DrywallShowcaseComponent() {
 
   const fetchImages = async () => {
     try {
-      const response = await axios.get('http://127.0.0.1:5001/images');
+      const token = localStorage.getItem('token'); // Recupera el token
+      const response = await axios.get(`http://127.0.0.1:5001/images`, {
+        headers: {
+          Authorization: `Bearer ${token}`, // Incluye el encabezado correctamente
+        },
+      });
       setUploadedImages(response.data);
     } catch (error) {
       console.error('Error fetching images:', error);
