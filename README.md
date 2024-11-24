@@ -13,4 +13,4 @@
 
 El usuario también es capaz de subir sus propias imágenes de diseños.
 
-![Tutorial](images/3.png)
+![Tutorial](images/6.png)
