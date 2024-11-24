@@ -9,7 +9,7 @@
 
 ## Subida de imágenes
 
-![Tutorial](images/2.png)
+![Tutorial](images/5.png)
 
 El usuario también es capaz de subir sus propias imágenes de diseños.
 
