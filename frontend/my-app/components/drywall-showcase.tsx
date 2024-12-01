@@ -41,6 +41,7 @@ export function DrywallShowcaseComponent() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [uploadSuccessMessage, setUploadSuccessMessage] = useState<string | null>(null)
   
   const openModal = (image: string) => {
     setSelectedImage(image);
@@ -58,6 +59,7 @@ export function DrywallShowcaseComponent() {
     setCurrentIndex((prevIndex) => (prevIndex - 1 + drywallTechniques.length) % drywallTechniques.length)
   }
 
+
   const fetchImages = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -65,6 +67,7 @@ export function DrywallShowcaseComponent() {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        withCredentials: true,
       });
   
       // Construir URLs con token en el encabezado para cada imagen
@@ -124,6 +127,7 @@ export function DrywallShowcaseComponent() {
     }
   }
 
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
@@ -146,33 +150,34 @@ export function DrywallShowcaseComponent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-  
+
     if (!designId || !imageFile) {
       console.error('Error: Todos los campos son obligatorios.')
       return
     }
-  
+
     const formData = new FormData()
     formData.append('design_id', designId)
     formData.append('image', imageFile)
-  
-    // Recuperar el token desde localStorage
+
     const token = localStorage.getItem('token')
     if (!token) {
       console.error('Error: No se encontró el token de autenticación.')
       return
     }
-  
+
     try {
       await axios.post('http://127.0.0.1:5001/images/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}`, // Formato correcto
+          'Authorization': `Bearer ${token}`,
         },
+        withCredentials:true,
       })
+      fetchImages();
       setImageFile(null)
       setDesignId('')
-      console.log('Imagen subida con éxito')
+      setUploadSuccessMessage('La imagen se subió correctamente.') // Mensaje de éxito
     } catch (error) {
       console.error('Error al subir la imagen:', error)
     }
@@ -355,6 +360,12 @@ export function DrywallShowcaseComponent() {
             </div>
             <Button type="submit" className="mt-4">Subir Imagen</Button>
           </form>
+          {/* Mensaje de éxito */}
+        {uploadSuccessMessage && (
+          <div className="mt-4 p-4 bg-green-100 text-green-800 rounded-lg">
+            {uploadSuccessMessage}
+          </div>
+        )}
         </div>
 
         {/* Imágenes Subidas */}
